@@ -1,20 +1,21 @@
-import cv2 # type: ignore
+import cv2
+from face_embeddings import get_face_embedding
+from face_storage import load_registered_faces, save_registered_faces
 
 class FaceRegistrar:
     def __init__(self, face_detector):
         """
         Inicializa el registrador de caras.
-        Recibe una instancia de FaceDetector para reutilizar la detección.
+        Carga el diccionario de rostros registrados para conservar la información entre sesiones.
         """
         self.face_detector = face_detector
-        self.registered_name = None
-        self.registered_face_image = None
+        self.registered_faces = load_registered_faces()  # {nombre: embedding}
 
     def register_face(self, frame):
         """
-        Detecta las caras en el frame y, si se detecta exactamente una,
-        muestra la imagen de la cara en una ventana, solicita el nombre y la registra.
-        Si hay 0 o más de una cara, devuelve un mensaje de error.
+        Detecta la(s) cara(s) en el frame y, si se detecta exactamente una,
+        solicita el nombre, calcula su embedding y lo almacena en el diccionario persistente.
+        Devuelve un mensaje de resultado.
         """
         boxes = self.face_detector.get_face_boxes(frame)
         if not boxes:
@@ -25,11 +26,12 @@ class FaceRegistrar:
         (startX, startY, endX, endY) = boxes[0]
         face_roi = frame[startY:endY, startX:endX]
 
-        cv2.imshow("Cara para registrar", face_roi)
-        cv2.waitKey(1)  # Actualiza la ventana
-
         name = input("Ingresa tu nombre para registrar la cara: ")
 
-        self.registered_name = name
-        self.registered_face_image = face_roi
+        embedding = get_face_embedding(face_roi)
+        if embedding is None:
+            return "No se pudo calcular el embedding de la cara."
+
+        self.registered_faces[name] = embedding
+        save_registered_faces(self.registered_faces)
         return f"Cara registrada para: {name}"
