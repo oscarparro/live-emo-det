@@ -6,3 +6,4 @@ __pycache__/
 *.pyc
 
 # Otros archivos o carpetas que no desees versionar
+registered_faces.pkl
