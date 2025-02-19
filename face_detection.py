@@ -1,21 +1,22 @@
-import cv2
+import cv2 # type: ignore
 import numpy as np
 
 class FaceDetector:
     def __init__(self, prototxt_path, caffemodel_path, confidence_threshold=0.5):
         """
-        Inicializa la red de detección de rostros y el umbral de confianza.
+        Inicializa la red de detección de rostros.
         """
         self.net = cv2.dnn.readNetFromCaffe(prototxt_path, caffemodel_path)
         self.confidence_threshold = confidence_threshold
 
     def detect_faces(self, frame):
         """
-        Dibuja rectángulos en el frame con las caras detectadas y lo devuelve.
+        Dibuja un rectángulo en cada rostro detectado y devuelve el frame.
         """
         (h, w) = frame.shape[:2]
-        blob = cv2.dnn.blobFromImage(cv2.resize(frame, (300, 300)), 1.0,
-                                     (300, 300), (104.0, 177.0, 123.0))
+        blob = cv2.dnn.blobFromImage(
+            cv2.resize(frame, (300, 300)), 1.0, (300, 300), (104.0, 177.0, 123.0)
+        )
         self.net.setInput(blob)
         detections = self.net.forward()
 
@@ -33,8 +34,9 @@ class FaceDetector:
         de las caras detectadas en el frame.
         """
         (h, w) = frame.shape[:2]
-        blob = cv2.dnn.blobFromImage(cv2.resize(frame, (300, 300)), 1.0,
-                                     (300, 300), (104.0, 177.0, 123.0))
+        blob = cv2.dnn.blobFromImage(
+            cv2.resize(frame, (300, 300)), 1.0, (300, 300), (104.0, 177.0, 123.0)
+        )
         self.net.setInput(blob)
         detections = self.net.forward()
 

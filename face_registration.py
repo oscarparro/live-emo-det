@@ -1,4 +1,4 @@
-import cv2
+import cv2 # type: ignore
 
 class FaceRegistrar:
     def __init__(self, face_detector):
@@ -12,27 +12,24 @@ class FaceRegistrar:
 
     def register_face(self, frame):
         """
-        Detecta las caras en el frame, selecciona la de mayor tamaño,
-        muestra la región extraída y pide al usuario que ingrese su nombre.
-        Guarda el nombre y la imagen de la cara registrada.
+        Detecta las caras en el frame y, si se detecta exactamente una,
+        muestra la imagen de la cara en una ventana, solicita el nombre y la registra.
+        Si hay 0 o más de una cara, devuelve un mensaje de error.
         """
         boxes = self.face_detector.get_face_boxes(frame)
         if not boxes:
-            print("No se detectaron caras para registrar.")
-            return
+            return "No se detectaron caras para registrar."
+        if len(boxes) > 1:
+            return "Demasiadas personas en el frame para registrar. Asegúrate de que solo haya un rostro."
 
-        # Selecciona la cara más grande (mayor área)
-        largest_box = max(boxes, key=lambda box: (box[2] - box[0]) * (box[3] - box[1]))
-        (startX, startY, endX, endY) = largest_box
+        (startX, startY, endX, endY) = boxes[0]
         face_roi = frame[startY:endY, startX:endX]
 
-        # Muestra la región de la cara en una ventana separada
         cv2.imshow("Cara para registrar", face_roi)
-        cv2.waitKey(1)  # Solo para actualizar la ventana
+        cv2.waitKey(1)  # Actualiza la ventana
 
-        # Solicita el nombre al usuario (en consola)
         name = input("Ingresa tu nombre para registrar la cara: ")
 
         self.registered_name = name
         self.registered_face_image = face_roi
-        print(f"Cara registrada para: {name}")
+        return f"Cara registrada para: {name}"
