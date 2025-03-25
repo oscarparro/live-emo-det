@@ -9,7 +9,7 @@ class FaceRegistrar:
         Carga el diccionario de rostros registrados para conservar la información entre sesiones.
         """
         self.face_detector = face_detector
-        self.registered_faces = load_registered_faces()  # {nombre: embedding}
+        self.registered_faces = load_registered_faces()
 
     def register_face(self, frame):
         """

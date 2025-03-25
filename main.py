@@ -4,8 +4,7 @@ from face_detection import FaceDetector
 from face_registration import FaceRegistrar
 from face_embeddings import get_face_embedding
 
-def draw_overlay(frame,
-                 instructions,
+def draw_overlay(frame, instructions,
                  panel_pos=(0, 0),
                  panel_size=(300, None),
                  instructions_offset=(10, 30),
@@ -49,7 +48,6 @@ def recognize_faces(frame, face_detector, registered_faces, tolerance=0.6):
         embedding = get_face_embedding(face_roi)
         name = "Desconocido"
         if embedding is not None and registered_faces:
-            # Recorremos el diccionario de rostros registrados
             for reg_name, reg_embedding in registered_faces.items():
                 matches = face_recognition.compare_faces([reg_embedding], embedding, tolerance=tolerance)
                 if matches[0]:
@@ -59,13 +57,13 @@ def recognize_faces(frame, face_detector, registered_faces, tolerance=0.6):
     return recognized
 
 def main():
-    # Inicializa el detector de rostros (usa los archivos del modelo)
+    # Inicializa el detector de rostros
     face_detector = FaceDetector(
         prototxt_path="deploy.prototxt",
         caffemodel_path="res10_300x300_ssd_iter_140000.caffemodel",
         confidence_threshold=0.5
     )
-    # Inicializa el registrador, que carga los rostros previamente registrados (persistentes)
+    # Inicializa el registrador (que carga las caras registradas persistentes)
     face_registrar = FaceRegistrar(face_detector)
 
     cap = cv2.VideoCapture(0)
@@ -75,10 +73,16 @@ def main():
 
     cv2.namedWindow("Deteccion de Rostros", cv2.WINDOW_NORMAL)
 
-    # Parámetros para el panel de instrucciones (se muestra en la parte inferior)
-    panel_position = (0, 500)        # posición del panel (x, y). Ajusta según el tamaño de la ventana.
-    panel_size = (300, 100)          # tamaño del panel (ancho, alto)
-    instructions_offset = (10, 30)   # desplazamiento dentro del panel
+    # Configura el panel para las instrucciones en la parte inferior del frame
+    ret, temp_frame = cap.read()
+    if not ret:
+        print("No se pudo leer un frame para configurar el overlay.")
+        return
+    frame_height, frame_width = temp_frame.shape[:2]
+    panel_height = 100
+    panel_position = (0, frame_height - panel_height)  # Panel en la parte inferior
+    panel_size = (frame_width, panel_height)
+    instructions_offset = (10, 30)
     line_height = 30
 
     instructions = [
@@ -87,27 +91,32 @@ def main():
         "r: Registrar"
     ]
 
+    # Para mejorar el rendimiento, reconocemos rostros cada 'skip_frames'
+    skip_frames = 1
+    frame_counter = 0
+    recognized_faces = []  # Almacena el resultado del reconocimiento
+
     while True:
         ret, frame = cap.read()
         if not ret:
             print("No se pudo recibir el frame. Saliendo...")
             break
 
-        # Opcional: redimensiona la imagen (si lo deseas)
-        # frame = cv2.resize(frame, (800, 600))
+        frame_counter += 1
 
-        # Realiza la detección de rostros en el frame original
+        # Detección de rostros (rápida)
         frame_with_faces = face_detector.detect_faces(frame.copy())
 
-        # Realiza el reconocimiento para cada rostro detectado
-        recognized_faces = recognize_faces(frame, face_detector, face_registrar.registered_faces)
+        # Reconocimiento de rostros solo cada skip_frames para mejorar los fps
+        if frame_counter % skip_frames == 0:
+            recognized_faces = recognize_faces(frame, face_detector, face_registrar.registered_faces)
 
-        # Etiqueta cada rostro con el nombre reconocido
+        # Etiqueta los rostros reconocidos
         for name, (startX, startY, endX, endY) in recognized_faces:
             cv2.putText(frame_with_faces, name, (startX, startY - 10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 
-        # Agrega el panel de instrucciones en la parte inferior
+        # Agrega el panel de instrucciones en la parte inferior (no se superpone a la imagen principal)
         frame_with_overlay = draw_overlay(frame_with_faces, instructions,
                                           panel_pos=panel_position,
                                           panel_size=panel_size,
@@ -120,7 +129,7 @@ def main():
         if key == ord('q'):
             break
         elif key == ord('r'):
-            # Al pulsar 'r' se registra la cara (se solicita el nombre por consola)
+            # Registra la cara (pide el nombre por consola, calcula el embedding y lo almacena)
             message = face_registrar.register_face(frame)
             print(message)
 
